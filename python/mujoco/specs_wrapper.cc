@@ -190,6 +190,10 @@ raw::MjModel* MjSpec::Compile(mjVFS* vfs) {
     throw py::value_error(mjs_getError(ptr));
   }
 
+  // Remember a copy of the spec so that the model can be saved as XML (e.g. by
+  // the viewer), as is done for models loaded from XML.
+  _mjPRIVATE__set_xml_spec(mj_copySpec(ptr));
+
   int num_warnings = mjs_numWarnings(ptr);
   if (num_warnings > 0) {
     py::object warnings = py::module_::import("warnings");

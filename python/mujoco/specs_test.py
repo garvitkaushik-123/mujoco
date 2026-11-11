@@ -3124,6 +3124,19 @@ class SpecsTest(absltest.TestCase):
     with self.assertRaisesWithLiteralMatch(RuntimeError, "VFS is closed"):
       spec.discard_visual(vfs=vfs)
 
+  def test_save_last_xml_after_compile(self):
+    # A model compiled from a spec can be saved as XML, as the viewer does.
+    spec = mujoco.MjSpec()
+    body = spec.worldbody.add_body(name='compiled_body')
+    body.add_geom(size=[0.1, 0, 0])
+    model = spec.compile()
+    del spec
+
+    path = os.path.join(self.create_tempdir().full_path, 'saved.xml')
+    mujoco.mj_saveLastXML(path, model)
+    with open(path) as f:
+      self.assertIn('compiled_body', f.read())
+
 
 if __name__ == '__main__':
   absltest.main()

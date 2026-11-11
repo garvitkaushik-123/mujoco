@@ -28,6 +28,7 @@ MJAPI mjfLogHandler _mjPRIVATE_getGlobalLogHandler(void);
 MJAPI void* mj_arenaAllocByte(mjData* d, int bytes, int alignment);
 MJAPI void _mjPRIVATE_addRefElement(mjsElement* element);
 MJAPI void _mjPRIVATE_releaseElement(mjsElement* element);
+MJAPI void _mjPRIVATE__set_xml_spec(mjSpec* spec);
 }
 
 #endif  // MUJOCO_PYTHON_PRIVATE_H_

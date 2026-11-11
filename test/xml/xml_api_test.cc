@@ -18,7 +18,10 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 #include <gmock/gmock.h>
@@ -27,6 +30,7 @@
 #include <mujoco/mjmodel.h>
 #include <mujoco/mjspec.h>
 #include <mujoco/mujoco.h>
+#include "src/xml/xml_global.h"
 #include "test/fixture.h"
 
 namespace mujoco {
@@ -425,6 +429,39 @@ TEST_F(MujocoTest, FreeLastXml) {
   ASSERT_NE(mj_saveLastXML(nullptr, nullptr, nullptr, 0), 0);
   mj_freeLastXML();
   ASSERT_EQ(mj_saveLastXML(nullptr, nullptr, nullptr, 0), 0);
+}
+
+// a model compiled from a spec, rather than loaded from XML, can be saved once its spec is
+// registered as the last XML
+TEST_F(MujocoTest, SaveLastXmlAfterCompile) {
+  mj_freeLastXML();
+  mjSpec* spec = mj_makeSpec();
+  mjsBody* body = mjs_addBody(mjs_findBody(spec, "world"), nullptr);
+  mjs_setName(body->element, "compiled_body");
+  mjsGeom* geom = mjs_addGeom(body, nullptr);
+  geom->size[0] = 0.1;
+  mjModel* model = mj_compile(spec, nullptr);
+  ASSERT_THAT(model, NotNull()) << mjs_getError(spec);
+
+  // mj_compile does not change the last XML; callers that want a compiled spec to be
+  // saveable (e.g. the Python bindings) hand a copy of it over
+  std::array<char, 1024> error;
+  EXPECT_EQ(mj_saveLastXML(nullptr, model, error.data(), error.size()), 0);
+  _mjPRIVATE__set_xml_spec(mj_copySpec(spec));
+
+  // the spec may be deleted: the saved copy is independent of it
+  mj_deleteSpec(spec);
+
+  std::string path = ::testing::TempDir() + "saved_after_compile.xml";
+  ASSERT_EQ(mj_saveLastXML(path.c_str(), model, error.data(), error.size()), 1)
+      << error.data();
+  std::ifstream file(path);
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  EXPECT_THAT(buffer.str(), HasSubstr("compiled_body"));
+  std::remove(path.c_str());
+
+  mj_deleteModel(model);
 }
 
 }  // namespace
